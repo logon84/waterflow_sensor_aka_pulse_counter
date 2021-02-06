@@ -11,7 +11,7 @@
        last_pulse - Last falling pulse detected datetime.
        since - ESP8266 last boot date.
   
-![GitHub Logo](https://github.com/logon84/esp8266-mqtt-pulsecounter/blob/master/schematic.png)
+![GitHub Logo](https://github.com/logon84/waterflow_sensor_aka_pulse_counter/blob/master/schematic.png)
 
 Copyright (C) 2016 Anton Viktorov <latonita@yandex.ru>  
 Mod by logon84@github 2021
