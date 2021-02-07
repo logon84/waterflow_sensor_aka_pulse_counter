@@ -2,10 +2,12 @@
 *
 * Waterflow sensor (Pulse counter) V3.0
 *
+* Written in Arduino IDE.
 * This counter uses interrupts on ESP-01's GPIO3.
 * It is "talk-only" client. 
 * It sends out data while pulses detected.
-* It keeps adding pulses until poweroff/reset..
+* NTP sync.
+* It keeps adding pulses until poweroff/reset.
 *
 * MQTT Message consists of 
 *       pulses - number of pulses counted since last succesful connection to server
