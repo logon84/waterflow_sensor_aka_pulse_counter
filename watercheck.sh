@@ -42,7 +42,7 @@ if [ -z $amIpresent ]; then
 			elif [ $waterflow_sensor_last -eq 1 ] && [ $waterflow_status -eq 1 ]; then
 				waterflow_strike=$(awk 'NR==1 {print; exit}' /opt/usr/sbin/waterflow_sensor.strike)
 				waterflow_strike=$((waterflow_strike + 1))
-		        	echo waterflow_strike > /opt/usr/sbin/waterflow_sensor.strike
+		        	echo $waterflow_strike > /opt/usr/sbin/waterflow_sensor.strike
 		        	if [ $waterflow_strike -ge 2 ]; then
 		        		#still water running. 
 		        		/opt/usr/bin/telegram-send --config /opt/etc/telegram-send.conf "ALERTA - ALERTA: Fuga de agua en casa"
