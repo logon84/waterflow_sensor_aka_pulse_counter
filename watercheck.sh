@@ -19,7 +19,7 @@ amIpresent=$(arp -a | grep $my_smartphone_mac | tr -d ' ')
 
 if [ -z $amIpresent ]; then
 	#I'm out of home
-	waterflow_status=$(/opt/usr/bin/mosquitto_sub -h $mqtt_broker -u $mqtt_user -P mqtt_password -t waterflow -q 2 -C 1 -W 5 | jq -r ".moved_last_half_hour")
+	waterflow_status=$(/opt/usr/bin/mosquitto_sub -h $mqtt_broker -u $mqtt_user -P $mqtt_password -t waterflow -q 2 -C 1 -W 5 | jq -r ".moved_last_half_hour")
 	if [ ! -z $waterflow_status ]; then
 		if [ ! -e /opt/usr/sbin/waterflow_sensor.strike ]; then
 			#first water check after leaving home
