@@ -1,5 +1,6 @@
 # Waterflow sensor - pulse counter which sends data over MQTT
 
+* Written in Arduino IDE.
 * This counter uses interrupts on ESP-01's GPIO3.
 * It is "talk-only" client. 
 * It sends out data while pulses detected.
