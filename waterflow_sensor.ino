@@ -10,10 +10,12 @@
 * It keeps adding pulses until poweroff/reset.
 *
 * MQTT Message consists of 
-*       pulses - number of pulses counted since last succesful connection to server
-*       moved_last_half_hour - True if a transition in input pin has been detected in the last half hour
-*       last_pulse - Last falling pulse detected (metal disc detected) datetime
-*       since - Last booting datetime
+*       pulses - number of pulses counted since last device boot.
+*       edges - number of rising and falling edges detected. Useful to check if disc is moving comparing old and actual value.
+*       moved_last_half_hour - '1' if a transition in input pin has been detected in the last half hour.
+*       inactive_for_48hrs - '1' if no new data in last 48 hours. Good to alarm if sensor is not registering data for a long period.
+*       last_pulse - Last falling pulse detected (metal disc detected) datetime.
+*       since - Last booting datetime.
 *
 * Copyright (C) 2021 Rubén López <rubenlogon@yahoo.es>
 * 
@@ -31,6 +33,7 @@
 
 bool send_data = true;
 bool moved_in_last_half_hour = false;
+bool moved_in_last_48hrs = false;
 const long utcOffsetInSeconds = 3600; //UTC+1
 String BootDatetime = "-";
 String LastPulseDatetime = "-";
@@ -38,6 +41,7 @@ String LastPulseDatetime = "-";
 volatile bool edge_detected = false;
 volatile bool falling_edge_detected = false;
 volatile unsigned int Pulses = 0;
+volatile unsigned int Edges = 0;
 volatile unsigned long LastPulseMillis;
 volatile unsigned long LastEdgeMillis;
 
@@ -49,12 +53,13 @@ WiFiClient WifiClient;
 PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
-const size_t bufferSize = JSON_OBJECT_SIZE(4);
+const size_t bufferSize = JSON_OBJECT_SIZE(6);
 DynamicJsonBuffer jsonBuffer(bufferSize);
 JsonObject& payload = jsonBuffer.createObject();
 
 void pulseHandler() {
   edge_detected = true;
+  Edges = Edges + 1;
   LastEdgeMillis = millis();
   if(!digitalRead(PULSE_PIN)){ //FALLING EDGE
     if((unsigned long)(millis() - LastPulseMillis) >= DEBOUNCE_MS) {
@@ -67,7 +72,9 @@ void pulseHandler() {
 
 bool pubdata(void) {
   payload["pulses"]               = Pulses;
+  payload["edges"]                = Edges;
   payload["moved_last_half_hour"] = int(moved_in_last_half_hour);
+  payload["inactive_for_48hrs"]   = int(!moved_in_last_48hrs);
   payload["last_pulse"]           = LastPulseDatetime;
   payload["since"]                = BootDatetime;
 
@@ -110,12 +117,17 @@ void loop() {
     if((unsigned long)(millis() - LastPulseMillis) >= LED_FLICKER_MS){
       digitalWrite(LED_BUILTIN, LOW); //There's wifi, then led ON
     }
-    if((unsigned long)(millis() - LastEdgeMillis) >= 1800 * 1000 && moved_in_last_half_hour) {
+    if(moved_in_last_half_hour && (unsigned long)(millis() - LastEdgeMillis) >= 1800 * 1000) {
       moved_in_last_half_hour = false;
+      send_data = true;
+    }
+    if(moved_in_last_48hrs && (unsigned long)(millis() - LastEdgeMillis) >= 3600 * 24 * 2 * 1000) {
+      moved_in_last_48hrs = false;
       send_data = true;
     }
     if(edge_detected) {
       moved_in_last_half_hour = true;
+      moved_in_last_48hrs = true;
       send_data = true;
       edge_detected = false;
         if(falling_edge_detected) {
