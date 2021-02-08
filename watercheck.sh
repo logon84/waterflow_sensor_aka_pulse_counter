@@ -27,7 +27,7 @@ if [ -z $amIpresent ]; then
 			echo $edges_count > /opt/usr/sbin/waterflow_sensor.edges
 		else
 			#subsequent checks after leaving home
-			edges_count_prev=$(awk 'NR==1 {print; exit}' /opt/usr/sbin/waterflow_sensor.edges)
+			edges_count_prev=$(cat "/opt/usr/sbin/waterflow_sensor.edges")
 			echo $edges_count > /opt/usr/sbin/waterflow_sensor.edges
 			if [ $edges_count -ne $edges_count_prev ]; then
 				#new edges detected, but I'm out of home. Water running!
