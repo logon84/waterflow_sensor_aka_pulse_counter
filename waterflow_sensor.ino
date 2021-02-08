@@ -53,7 +53,7 @@ WiFiClient WifiClient;
 PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
-const size_t bufferSize = JSON_OBJECT_SIZE(6);
+const size_t bufferSize = JSON_OBJECT_SIZE(7);
 DynamicJsonBuffer jsonBuffer(bufferSize);
 JsonObject& payload = jsonBuffer.createObject();
 
@@ -72,6 +72,7 @@ void pulseHandler() {
 
 bool pubdata(void) {
   payload["pulses"]               = Pulses;
+  payload["liters"]               = Pulses*(1000*0.0001); //my water meter has a resolution of 0.0001m³/rev. For 0.001m³/rev watermeters, pulses = liters
   payload["edges"]                = Edges;
   payload["moved_last_half_hour"] = int(moved_in_last_half_hour);
   payload["inactive_for_48hrs"]   = int(!moved_in_last_48hrs);
