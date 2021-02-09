@@ -104,7 +104,8 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
   pinMode(PULSE_PIN, INPUT_PULLUP);
   attachInterrupt(PULSE_PIN, pulseHandler, CHANGE);
-
+  
+  WiFi.hostname(client_id);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED);
