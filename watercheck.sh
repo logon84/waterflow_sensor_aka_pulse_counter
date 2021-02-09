@@ -9,19 +9,14 @@ mqtt_broker="192.168.1.1"
 export PATH="$PATH:/opt/bin:/opt/sbin:/opt/usr/bin:/opt/usr/sbin"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/lib:/opt/usr/lib"
 
-#delete mosquitto log if size is 1GB
-log_size=$(sfk list -kbytes /opt/var/log/mosquitto.log | tr -dc '0-9'; echo "")
-if [[ $log_size -gt 1048576 ]]; then
-	rm -rf /opt/var/log/mosquitto.log
-fi
-
 amIpresent=$(arp -a | grep $my_smartphone_mac | tr -d ' ')
-
 if [ -z $amIpresent ]; then
 	#I'm out of home
 	waterflow_status=$(/opt/usr/bin/mosquitto_sub -h $mqtt_broker -u $mqtt_user -P $mqtt_password -t waterflow -q 2 -C 1 -W 5)
 	edges_count=$(echo $waterflow_status | jq -r ".edges")
-	if [ ! -z $waterflow_status ]; then
+	sensor_ip=$(cat /tmp/dhcp.leases | grep waterflow-sensor-1 | cut -d' ' -f3)
+	isSensorpresent=$(arp -a | grep $sensor_ip | tr -d ' ')
+	if [ ! -z $waterflow_status ] && [ ! -z $isSensorpresent ]; then
 		if [ ! -e /opt/usr/sbin/waterflow_sensor.edges ]; then
 			#first water check after leaving home
 			echo $edges_count > /opt/usr/sbin/waterflow_sensor.edges
