@@ -20,6 +20,6 @@ const char* dest_topic    = "waterflow";
 const int PULSE_PIN  = 3;
 
 // sketch settings
-const unsigned int DEBOUNCE_MS = 20;
+const unsigned int DEBOUNCE_MS = 100;
 const unsigned int LED_FLICKER_MS = 200;
 const float WATERMETER_RESOLUTION_M3 = 0.0001;
