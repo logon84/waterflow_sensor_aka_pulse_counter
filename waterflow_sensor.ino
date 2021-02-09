@@ -73,7 +73,7 @@ void pulseHandler() {
 
 bool pubdata(void) {
   payload["pulses"]               = Pulses;
-  payload["liters"]               = Pulses*(1000*WATERMETER_RESOLUTION_LITERS); //my water meter has a resolution of 0.0001m³/rev. For 0.001m³/rev watermeters, pulses = liters
+  payload["liters"]               = Pulses*(1000*WATERMETER_RESOLUTION_M3); //my water meter has a resolution of 0.0001m³/rev. For 0.001m³/rev watermeters, pulses = liters
   payload["edges"]                = Edges;
   payload["moved_last_half_hour"] = int(moved_in_last_half_hour);
   payload["inactive_for_48hrs"]   = int(!moved_in_last_48hrs);
