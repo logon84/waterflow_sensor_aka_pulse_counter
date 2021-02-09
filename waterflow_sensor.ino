@@ -15,7 +15,7 @@
 *       edges - number of rising and falling edges detected. Useful to check if disc is moving comparing old and actual value.
 *       moved_last_half_hour - '1' if a transition in input pin has been detected in the last half hour.
 *       inactive_for_48hrs - '1' if no new data in last 48 hours. Good to alarm if sensor is not registering data for a long period.
-*       last_pulse - Last falling pulse detected (metal disc detected) datetime.
+*       last_edge - Last edge detected datetime.
 *       since - Last booting datetime.
 *
 * Copyright (C) 2021 Rubén López <rubenlogon@yahoo.es>
@@ -37,13 +37,12 @@ bool moved_in_last_half_hour = false;
 bool moved_in_last_48hrs = false;
 const long utcOffsetInSeconds = 3600; //UTC+1
 String BootDatetime = "-";
-String LastPulseDatetime = "-";
+String LastEdgeDatetime = "-";
 
 volatile bool edge_detected = false;
-volatile bool falling_edge_detected = false;
+volatile bool pulse_reference; //indicates which kind of edge is going to be the reference for 1 pulse rev. (true = rising edge, false = falling edge)
 volatile unsigned int Pulses = 0;
 volatile unsigned int Edges = 0;
-volatile unsigned long LastPulseMillis;
 volatile unsigned long LastEdgeMillis;
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -59,25 +58,26 @@ DynamicJsonBuffer jsonBuffer(bufferSize);
 JsonObject& payload = jsonBuffer.createObject();
 
 void pulseHandler() {
-  edge_detected = true;
-  Edges = Edges + 1;
-  LastEdgeMillis = millis();
-  if(!digitalRead(PULSE_PIN)){ //FALLING EDGE
-    if((unsigned long)(millis() - LastPulseMillis) >= DEBOUNCE_MS) {
+  if(Edges == 0) {
+    pulse_reference = !digitalRead(PULSE_PIN);
+  }
+  if((unsigned long)(millis() - LastEdgeMillis) >= DEBOUNCE_MS) {
+    edge_detected = true;
+    Edges = Edges + 1;
+    LastEdgeMillis = millis();
+    if(pulse_reference == digitalRead(PULSE_PIN)) { //We got a pulse (1 rev)
       Pulses = Pulses + 1;
-      LastPulseMillis = millis();
-      falling_edge_detected = true;
     }
   }
 }
 
 bool pubdata(void) {
-  payload["pulses"]               = Pulses;
-  payload["liters"]               = Pulses*(1000*WATERMETER_RESOLUTION_M3); //my water meter has a resolution of 0.0001m³/rev. For 0.001m³/rev watermeters, pulses = liters
+  payload["pulses"]               = Pulses; // = disc revs
+  payload["liters"]               = Edges*1000*WATERMETER_RESOLUTION_M3*(10/2); //my watermeter has a resolution of 0.0001m³/rev and half circle disc. 1 rev m³ = 10 x 0.0001. Half metal circle m³ res = (10 x 0.0001)/2. Half metal circle liters res = 1000 x (10 x 0.0001)/2 = 0.5l 
   payload["edges"]                = Edges;
   payload["moved_last_half_hour"] = int(moved_in_last_half_hour);
   payload["inactive_for_48hrs"]   = int(!moved_in_last_48hrs);
-  payload["last_pulse"]           = LastPulseDatetime;
+  payload["last_edge"]            = LastEdgeDatetime;
   payload["since"]                = BootDatetime;
 
   char buffer[512];
@@ -104,7 +104,7 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
   pinMode(PULSE_PIN, INPUT_PULLUP);
   attachInterrupt(PULSE_PIN, pulseHandler, CHANGE);
-  
+
   WiFi.hostname(client_id);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
@@ -117,7 +117,7 @@ void setup() {
 
 void loop() {
   if(WiFi.status() == WL_CONNECTED) {
-    if((unsigned long)(millis() - LastPulseMillis) >= LED_FLICKER_MS){
+    if((unsigned long)(millis() - LastEdgeMillis) >= LED_FLICKER_MS){
       digitalWrite(LED_BUILTIN, LOW); //There's wifi, then led ON
     }
     if(moved_in_last_half_hour && (unsigned long)(millis() - LastEdgeMillis) >= 1800 * 1000) {
@@ -131,14 +131,11 @@ void loop() {
     if(edge_detected) {
       moved_in_last_half_hour = true;
       moved_in_last_48hrs = true;
+      timeClient.update();
+      LastEdgeDatetime = timeClient.getFormattedDate();
+      digitalWrite(LED_BUILTIN, HIGH); //turnoff led
       send_data = true;
       edge_detected = false;
-        if(falling_edge_detected) {
-          timeClient.update();
-          LastPulseDatetime = timeClient.getFormattedDate();
-          digitalWrite(LED_BUILTIN, HIGH); //turnoff led
-          falling_edge_detected = false;
-        }
     }
     if(MqttClient.connected()) {
       if(send_data && pubdata()) {
