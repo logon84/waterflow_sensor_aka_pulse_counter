@@ -31,6 +31,10 @@
 #include <WiFiUdp.h>
 #include <PubSubClient.h>
 #include "waterflow_sensor.h"
+#ifdef OTA
+#include <ESP8266mDNS.h>
+#include <ArduinoOTA.h>
+#endif
 
 bool send_data = true;
 bool moved_in_last_half_hour = false;
@@ -54,8 +58,7 @@ PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 const size_t bufferSize = JSON_OBJECT_SIZE(7);
-DynamicJsonBuffer jsonBuffer(bufferSize);
-JsonObject& payload = jsonBuffer.createObject();
+DynamicJsonDocument payload(bufferSize);
 
 void pulseHandler() {
   if(Edges == 0) {
@@ -81,7 +84,7 @@ bool pubdata(void) {
   payload["since"]                = BootDatetime;
 
   char buffer[512];
-  payload.printTo(buffer, sizeof(buffer));
+  serializeJson(payload, buffer);
     
   if(!MqttClient.publish(dest_topic, buffer, true)) {
     //Fail to publish
@@ -108,11 +111,23 @@ void setup() {
   WiFi.hostname(client_id);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED);
+  while (WiFi.status() != WL_CONNECTED) {
+    // wait 500ms, flashing the blue LED to indicate WiFi connecting...
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(250);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(250);
+  }
   MqttClient.connect(client_id, mqtt_username, mqtt_password);
   timeClient.begin();
   timeClient.update();
   BootDatetime = timeClient.getFormattedDate();
+
+#ifdef OTA
+  ArduinoOTA.setHostname(client_id);
+  ArduinoOTA.setPassword(ota_password);
+  ArduinoOTA.begin();
+#endif
 }
 
 void loop() {
@@ -154,4 +169,7 @@ void loop() {
     WiFi.begin(ssid, password);
     while(WiFi.waitForConnectResult() != WL_CONNECTED);
   }
+#ifdef OTA
+  ArduinoOTA.handle();
+#endif
 }
