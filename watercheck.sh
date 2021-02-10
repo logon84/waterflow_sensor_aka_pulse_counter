@@ -14,12 +14,13 @@ if [ -z $amIpresent ]; then
 	#I'm out of home
 	waterflow_status=$(/opt/usr/bin/mosquitto_sub -h $mqtt_broker -u $mqtt_user -P $mqtt_password -t waterflow -q 2 -C 1 -W 5)
 	edges_count=$(echo $waterflow_status | jq -r ".edges")
-	sensor_ip=$(cat /tmp/dhcp.leases | grep waterflow-sensor-1 | cut -d' ' -f3)
+	sensor_ip=$(cat /tmp/dhcp.leases | grep waterflow | cut -d' ' -f3)
 	isSensorpresent=$(arp -a | grep $sensor_ip | tr -d ' ')
 	if [ ! -z $waterflow_status ] && [ ! -z $isSensorpresent ]; then
 		if [ ! -e /opt/usr/sbin/waterflow_sensor.edges ]; then
 			#first water check after leaving home
 			echo $edges_count > /opt/usr/sbin/waterflow_sensor.edges
+			echo "0" > /opt/usr/sbin/waterflow_sensor.notices
 		else
 			#subsequent checks after leaving home
 			edges_count_prev=$(cat "/opt/usr/sbin/waterflow_sensor.edges")
@@ -30,11 +31,19 @@ if [ -z $amIpresent ]; then
 		        fi
 		fi
 	else
-		/opt/usr/bin/telegram-send --config /opt/etc/telegram-send.conf "waterflow_sensor not sending data"
+		notices=$(cat /opt/usr/sbin/waterflow_sensor.notices)
+		if [ $notices -lt 3 ]; then
+			/opt/usr/bin/telegram-send --config /opt/etc/telegram-send.conf "waterflow_sensor not sending data"
+			notices=(($notices+1))
+			echo $notices > /opt/usr/sbin/waterflow_sensor.notices
+		fi
 	fi
 else
 	#I'm home, so delete flags
 	if [ -e /opt/usr/sbin/waterflow_sensor.edges ]; then
 		rm -rf  /opt/usr/sbin/waterflow_sensor.edges
+	fi
+	if [ -e /opt/usr/sbin/waterflow_sensor.notices ]; then
+		rm -rf  /opt/usr/sbin/waterflow_sensor.notices
 	fi
 fi
