@@ -1,5 +1,7 @@
 
-//#define OTA
+//OTA settings
+#define OTA
+const char* ota_password = "update_waterflow";
 
 // wifi settings
 const char* ssid     = "wifi_ssid_here";
