@@ -18,6 +18,7 @@
        
   
 ![Schematic](https://raw.githubusercontent.com/logon84/waterflow_sensor_aka_pulse_counter/main/schematic.png)
+R2 <= HfeMIN * (Vin - Vbe) / 3 * IcMAX = 200 * (12 - 0.7)/3 * 0.1 <= 7.53Kohm.  R2 = 6.8K
 
 Copyright (C) 2021 Rubén López <rubenlogon@yahoo.es>  
 
