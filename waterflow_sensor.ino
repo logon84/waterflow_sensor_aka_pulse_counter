@@ -26,9 +26,9 @@
 *****************************************************************************************/
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <NTPClient.h> //version from https://github.com/taranais/NTPClient/
+#include <time.h>
+#include <TZ.h>
 #include <ESP8266WiFi.h>
-#include <WiFiUdp.h>
 #include <PubSubClient.h>
 #include "waterflow_sensor.h"
 #ifdef OTA
@@ -39,9 +39,8 @@
 bool send_data = true;
 bool moved_in_last_half_hour = false;
 bool moved_in_last_48hrs = false;
-const long utcOffsetInSeconds = 3600; //UTC+1
-String BootDatetime = "-";
-String LastEdgeDatetime = "-";
+char* BootDatetime = "-";
+char* LastEdgeDatetime = "-";
 
 volatile bool edge_detected = false;
 volatile bool pulse_reference; //indicates which kind of edge is going to be the reference for 1 pulse rev. (true = rising edge, false = falling edge)
@@ -55,8 +54,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 WiFiClient WifiClient;
 PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
 const size_t bufferSize = JSON_OBJECT_SIZE(7);
 DynamicJsonDocument payload(bufferSize);
 
@@ -72,6 +69,17 @@ void pulseHandler() {
       Pulses = Pulses + 1;
     }
   }
+}
+
+char* get_time() {
+  configTime(TIME_ZONE, "pool.ntp.org");
+  time_t now = 0;
+  now = time(nullptr);
+  while (!now) {
+    now = time(nullptr);
+    delay(100);
+  }
+  return ctime(&now);
 }
 
 bool pubdata(void) {
@@ -119,9 +127,7 @@ void setup() {
     delay(250);
   }
   MqttClient.connect(client_id, mqtt_username, mqtt_password);
-  timeClient.begin();
-  timeClient.update();
-  BootDatetime = timeClient.getFormattedDate();
+  BootDatetime = get_time();
 
 #ifdef OTA
   ArduinoOTA.setHostname(client_id);
@@ -146,8 +152,7 @@ void loop() {
     if(edge_detected) {
       moved_in_last_half_hour = true;
       moved_in_last_48hrs = true;
-      timeClient.update();
-      LastEdgeDatetime = timeClient.getFormattedDate();
+      LastEdgeDatetime = get_time();
       digitalWrite(LED_BUILTIN, HIGH); //turnoff led
       send_data = true;
       edge_detected = false;
