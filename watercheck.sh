@@ -14,6 +14,7 @@ if [ -z $amIpresent ]; then
 	#I'm out of home
 	waterflow_status=$(/opt/usr/bin/mosquitto_sub -h $mqtt_broker -u $mqtt_user -P $mqtt_password -t waterflow -q 2 -C 1 -W 5)
 	edges_count=$(echo $waterflow_status | jq -r ".edges")
+	sensor_since=$(echo $waterflow_status | jq -r ".since")
 	sensor_ip=$(cat /tmp/dhcp.leases | grep waterflow | cut -d' ' -f3)
 	isSensorpresent=$(arp -a | grep $sensor_ip | tr -d ' ')
 	if [ ! -z $waterflow_status ] && [ ! -z $isSensorpresent ]; then
@@ -21,14 +22,21 @@ if [ -z $amIpresent ]; then
 			#first water check after leaving home
 			echo $edges_count > /opt/usr/sbin/waterflow_sensor.edges
 			echo "0" > /opt/usr/sbin/waterflow_sensor.notices
+			echo $sensor_since > /opt/usr/sbin/waterflow_sensor.since
 		else
 			#subsequent checks after leaving home
 			edges_count_prev=$(cat "/opt/usr/sbin/waterflow_sensor.edges")
+			sensor_since_prev=$(cat "/opt/usr/sbin/waterflow_sensor.since")
 			echo $edges_count > /opt/usr/sbin/waterflow_sensor.edges
-			if [ $edges_count -ne $edges_count_prev ]; then
-				#new edges detected, but I'm out of home. Water running!
-				/opt/usr/bin/telegram-send --config /opt/etc/telegram-send.conf "ALERTA - ALERTA: Fuga de agua en casa"
-		        fi
+			if [ $sensor_since == $sensor_since_prev ]; then
+				if [ $edges_count -ne $edges_count_prev ]; then
+					#new edges detected, but I'm out of home. Water running!
+					/opt/usr/bin/telegram-send --config /opt/etc/telegram-send.conf "ALERTA: Fuga de agua en casa $((($edges_count*0.5/15)-($edges_count_prev*0.5/15))) litros/minuto"
+				fi
+			else
+				#power failure while being out, update sensor last boot time
+				echo $sensor_since > /opt/usr/sbin/waterflow_sensor.since
+			fi
 		fi
 	else
 		notices=$(cat /opt/usr/sbin/waterflow_sensor.notices)
@@ -45,5 +53,8 @@ else
 	fi
 	if [ -e /opt/usr/sbin/waterflow_sensor.notices ]; then
 		rm -rf  /opt/usr/sbin/waterflow_sensor.notices
+	fi
+	if [ -e /opt/usr/sbin/waterflow_sensor.since ]; then
+		rm -rf  /opt/usr/sbin/waterflow_sensor.since
 	fi
 fi
