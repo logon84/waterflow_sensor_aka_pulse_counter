@@ -3,6 +3,9 @@
 #define OTA
 const char* ota_password = "update_waterflow";
 
+//Clock settings
+#define TIME_ZONE TZ_Europe_Madrid
+
 // wifi settings
 const char* ssid     = "wifi_ssid_here";
 const char* password = "wifi_password_here";
