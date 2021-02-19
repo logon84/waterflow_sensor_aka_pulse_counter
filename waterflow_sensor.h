@@ -21,7 +21,8 @@ const char* mqtt_password = "mqtt_password_here";
 const char* client_id     = "waterflow"; // Must be unique on the MQTT network
 const char* dest_topic    = "waterflow";
 
-// input pinouts
+// pinouts
+const int blueLedPin = 1;
 const int PULSE_PIN  = 3;
 
 // sketch settings
