@@ -57,7 +57,7 @@ PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
 const size_t bufferSize = JSON_OBJECT_SIZE(7);
 DynamicJsonDocument payload(bufferSize);
 
-void pulseHandler() {
+void ICACHE_RAM_ATTR pulseHandler() {
   if(Edges == 0) {
     pulse_reference = !digitalRead(PULSE_PIN);
   }
@@ -111,19 +111,19 @@ bool pubdata(void) {
 
 void setup() {
   //Serial.begin(115200, SERIAL8N1, SERIALTX_ONLY);
-  pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
-  pinMode(PULSE_PIN, INPUT_PULLUP);
-  attachInterrupt(PULSE_PIN, pulseHandler, CHANGE);
+  pinMode(blueLedPin, OUTPUT);
+  digitalWrite(blueLedPin, HIGH);
+  pinMode(PULSE_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(PULSE_PIN), pulseHandler, CHANGE);
 
   WiFi.hostname(client_id);
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     // wait 500ms, flashing the blue LED to indicate WiFi connecting...
-    digitalWrite(LED_BUILTIN, LOW);
+    digitalWrite(blueLedPin, LOW);
     delay(250);
-    digitalWrite(LED_BUILTIN, HIGH);
+    digitalWrite(blueLedPin, HIGH);
     delay(250);
   }
   MqttClient.connect(client_id, mqtt_username, mqtt_password);
@@ -139,7 +139,7 @@ void setup() {
 void loop() {
   if(WiFi.status() == WL_CONNECTED) {
     if((unsigned long)(millis() - LastEdgeMillis) >= LED_FLICKER_MS){
-      digitalWrite(LED_BUILTIN, LOW); //There's wifi, then led ON
+      digitalWrite(blueLedPin, LOW); //There's wifi, then led ON
     }
     if(moved_in_last_half_hour && (unsigned long)(millis() - LastEdgeMillis) >= 1800 * 1000) {
       moved_in_last_half_hour = false;
@@ -153,7 +153,7 @@ void loop() {
       moved_in_last_half_hour = true;
       moved_in_last_48hrs = true;
       LastEdgeDatetime = get_time();
-      digitalWrite(LED_BUILTIN, HIGH); //turnoff led
+      digitalWrite(blueLedPin, HIGH); //turnoff led
       send_data = true;
       edge_detected = false;
     }
@@ -170,7 +170,7 @@ void loop() {
     }
   } 
   else {
-    digitalWrite(LED_BUILTIN, HIGH); //No wifi, no led light
+    digitalWrite(blueLedPin, HIGH); //No wifi, no led light
     WiFi.begin(ssid, password);
     while(WiFi.waitForConnectResult() != WL_CONNECTED);
   }
