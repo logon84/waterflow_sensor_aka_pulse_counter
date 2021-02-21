@@ -163,7 +163,7 @@ void loop() {
       edge_detected = false;
     }
     if(MqttClient.connected()) {
-      if(send_data && pubdata()) {
+      if(send_data && (unsigned long)(millis() - LastEdgeMillis) >= MIN_TIME_BETWEEN_SENDS_MS && pubdata()) {
         send_data = false;
       }
       MqttClient.loop();
