@@ -39,8 +39,8 @@
 bool send_data = true;
 bool moved_in_last_half_hour = false;
 bool moved_in_last_48hrs = false;
-char* BootDatetime = "-";
-char* LastEdgeDatetime = "-";
+time_t Bootdatetime;
+time_t Edgedatetime;
 
 volatile bool edge_detected = false;
 volatile bool pulse_reference; //indicates which kind of edge is going to be the reference for 1 pulse rev. (true = rising edge, false = falling edge)
@@ -54,7 +54,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 WiFiClient WifiClient;
 PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
-const size_t bufferSize = JSON_OBJECT_SIZE(7);
+const size_t bufferSize = JSON_OBJECT_SIZE(20);
 DynamicJsonDocument payload(bufferSize);
 
 void ICACHE_RAM_ATTR pulseHandler() {
@@ -71,15 +71,14 @@ void ICACHE_RAM_ATTR pulseHandler() {
   }
 }
 
-char* get_time() {
-  configTime(TIME_ZONE, "pool.ntp.org");
-  time_t now = 0;
-  now = time(nullptr);
-  while (!now) {
-    now = time(nullptr);
+time_t get_epoch_time() {
+  time_t tnow = 0;
+  tnow = time(nullptr);
+  while (tnow<100000) {
+    tnow = time(nullptr);;
     delay(100);
   }
-  return ctime(&now);
+  return tnow;
 }
 
 bool pubdata(void) {
@@ -88,8 +87,13 @@ bool pubdata(void) {
   payload["edges"]                = Edges;
   payload["moved_last_half_hour"] = int(moved_in_last_half_hour);
   payload["inactive_for_48hrs"]   = int(!moved_in_last_48hrs);
-  payload["last_edge"]            = LastEdgeDatetime;
-  payload["since"]                = BootDatetime;
+  payload["since"]                = ctime(&Bootdatetime);
+  if(Edges == 0){
+    payload["last_edge"]            = '-';
+  }
+  else{
+    payload["last_edge"]            = ctime(&Edgedatetime);
+  }
 
   char buffer[512];
   serializeJson(payload, buffer);
@@ -127,8 +131,9 @@ void setup() {
     delay(250);
   }
   MqttClient.connect(client_id, mqtt_username, mqtt_password);
-  BootDatetime = get_time();
-
+  configTime(TIME_ZONE, "es.pool.ntp.org");
+  yield();
+  Bootdatetime = get_epoch_time();
 #ifdef OTA
   ArduinoOTA.setHostname(client_id);
   ArduinoOTA.setPassword(ota_password);
@@ -152,7 +157,7 @@ void loop() {
     if(edge_detected) {
       moved_in_last_half_hour = true;
       moved_in_last_48hrs = true;
-      LastEdgeDatetime = get_time();
+      Edgedatetime = get_epoch_time();
       digitalWrite(blueLedPin, HIGH); //turnoff led
       send_data = true;
       edge_detected = false;
