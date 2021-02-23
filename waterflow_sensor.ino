@@ -59,13 +59,13 @@ DynamicJsonDocument payload(bufferSize);
 
 void ICACHE_RAM_ATTR pulseHandler() {
   if(Edges == 0) {
-    pulse_reference = !digitalRead(PULSE_PIN);
+    pulse_reference = bool(!digitalRead(PULSE_PIN));
   }
   if((unsigned long)(millis() - LastEdgeMillis) >= DEBOUNCE_MS) {
     edge_detected = true;
     Edges = Edges + 1;
     LastEdgeMillis = millis();
-    if(pulse_reference == digitalRead(PULSE_PIN)) { //We got a pulse (1 rev)
+    if(pulse_reference == bool(digitalRead(PULSE_PIN))) { //We got a pulse (1 rev)
       Pulses = Pulses + 1;
     }
   }
