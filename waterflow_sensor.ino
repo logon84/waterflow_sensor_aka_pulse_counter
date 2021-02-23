@@ -54,7 +54,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 WiFiClient WifiClient;
 PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
-const size_t bufferSize = JSON_OBJECT_SIZE(20);
+const size_t bufferSize = JSON_OBJECT_SIZE(25);
 DynamicJsonDocument payload(bufferSize);
 
 void ICACHE_RAM_ATTR pulseHandler() {
@@ -81,18 +81,25 @@ time_t get_epoch_time() {
   return tnow;
 }
 
+String get_formatted_time(time_t atime) {
+  String str_out;
+  str_out = String(ctime(&atime));
+  str_out.trim();
+  return str_out;
+}
+
 bool pubdata(void) {
   payload["pulses"]               = Pulses; // = disc revs
   payload["liters"]               = Edges*1000*WATERMETER_RESOLUTION_M3*(10/2); //my watermeter has a resolution of 0.0001m³/rev and half circle disc. 1 rev m³ = 10 x 0.0001. Half metal circle m³ res = (10 x 0.0001)/2. Half metal circle liters res = 1000 x (10 x 0.0001)/2 = 0.5l 
   payload["edges"]                = Edges;
   payload["moved_last_half_hour"] = int(moved_in_last_half_hour);
   payload["inactive_for_48hrs"]   = int(!moved_in_last_48hrs);
-  payload["since"]                = ctime(&Bootdatetime);
+  payload["since"]                = get_formatted_time(Bootdatetime);
   if(Edges == 0){
-    payload["last_edge"]            = '-';
+    payload["last_edge"]            = "-";
   }
   else{
-    payload["last_edge"]            = ctime(&Edgedatetime);
+    payload["last_edge"]            = get_formatted_time(Edgedatetime);
   }
 
   char buffer[512];
