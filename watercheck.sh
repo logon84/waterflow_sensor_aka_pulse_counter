@@ -31,7 +31,7 @@ if [ -z $amIpresent ]; then
 			if [ "$sensor_since" = "$sensor_since_prev" ]; then
 				if [ $edges_count -ne $edges_count_prev ]; then
 					#new edges detected, but I'm out of home. Water running!
-					/opt/usr/bin/telegram-send --config /opt/etc/telegram-send.conf "ALERTA: Fuga de agua en casa $((($edges_count*0.5/15)-($edges_count_prev*0.5/15))) litros/minuto"
+					/opt/usr/bin/telegram-send --config /opt/etc/telegram-send.conf "ALERTA: Fuga de agua en casa! ($edges_count_prev, $edges_count) "
 				fi
 			else
 				#power failure while being out, update sensor last boot time
