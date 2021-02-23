@@ -42,7 +42,7 @@ if [ -z $amIpresent ]; then
 		notices=$(cat /opt/usr/sbin/waterflow_sensor.notices)
 		if [ $notices -lt 3 ]; then
 			/opt/usr/bin/telegram-send --config /opt/etc/telegram-send.conf "waterflow_sensor not sending data"
-			notices=(($notices+1))
+			notices=$(($notices+1))
 			echo $notices > /opt/usr/sbin/waterflow_sensor.notices
 		fi
 	fi
