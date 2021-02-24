@@ -17,10 +17,11 @@
        since - ESP8266 last boot date.
        
   
-![Schematic](https://raw.githubusercontent.com/logon84/waterflow_sensor_aka_pulse_counter/main/schematic3.png)
-
-https://www.youtube.com/watch?v=LDygSFmjFS4
-
+![Schematic](https://raw.githubusercontent.com/logon84/waterflow_sensor_aka_pulse_counter/main/schematic3.png)  
+  
+https://www.youtube.com/watch?v=LDygSFmjFS4  
+  
+    
 Buy me a beer if you liked it:
 [![Donate](https://www.paypalobjects.com/es_ES/ES/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=ER2LTNM5LZDTY)  
 BTC address: 12cQuFn7yMSfDB1uKPGKLMQ7XSj1XF2sVA
