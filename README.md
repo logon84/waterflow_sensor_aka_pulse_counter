@@ -22,10 +22,14 @@
 https://www.youtube.com/watch?v=LDygSFmjFS4  
   
     
-Buy me a beer if you liked it:
+Copyright (C) 2021 Rubén López <rubenlogon@yahoo.es>  
+
+This library is free software. You may use/redistribute it under The MIT License terms.   
+  
+  
+  
+Buy me a beer if you liked it:  
 [![Donate](https://www.paypalobjects.com/es_ES/ES/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=ER2LTNM5LZDTY)  
 BTC address: 12cQuFn7yMSfDB1uKPGKLMQ7XSj1XF2sVA
 
-Copyright (C) 2021 Rubén López <rubenlogon@yahoo.es>  
 
-This library is free software. You may use/redistribute it under The MIT License terms. 
