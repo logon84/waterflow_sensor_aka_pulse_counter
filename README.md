@@ -17,7 +17,7 @@
        since - ESP8266 last boot date.
        
   
-![Schematic](https://raw.githubusercontent.com/logon84/waterflow_sensor_aka_pulse_counter/main/schematic3.png)  
+![Schematic](https://raw.githubusercontent.com/logon84/waterflow_sensor_aka_pulse_counter/main/schematic4.png)  
   
 https://www.youtube.com/watch?v=LDygSFmjFS4  
   
