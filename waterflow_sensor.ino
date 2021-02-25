@@ -54,7 +54,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 WiFiClient WifiClient;
 PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
-const size_t bufferSize = JSON_OBJECT_SIZE(25);
+const size_t bufferSize = JSON_OBJECT_SIZE(20);
 DynamicJsonDocument payload(bufferSize);
 
 void ICACHE_RAM_ATTR pulseHandler() {
@@ -74,8 +74,8 @@ void ICACHE_RAM_ATTR pulseHandler() {
 time_t get_epoch_time() {
   time_t tnow = 0;
   tnow = time(nullptr);
-  while (tnow<100000) {
-    tnow = time(nullptr);;
+  while (tnow<100000 || tnow == NULL) {
+    tnow = time(nullptr);
     delay(100);
   }
   return tnow;
