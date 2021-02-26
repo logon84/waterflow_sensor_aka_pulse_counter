@@ -39,6 +39,7 @@
 bool send_data = true;
 bool moved_in_last_half_hour = false;
 bool moved_in_last_48hrs = false;
+char str_buff[25];
 time_t Bootdatetime;
 time_t Edgedatetime;
 
@@ -54,8 +55,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 WiFiClient WifiClient;
 PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
-const size_t bufferSize = JSON_OBJECT_SIZE(20);
-DynamicJsonDocument payload(bufferSize);
+StaticJsonDocument<192> payload;
 
 void ICACHE_RAM_ATTR pulseHandler() {
   if(Edges == 0) {
@@ -81,11 +81,10 @@ time_t get_epoch_time() {
   return tnow;
 }
 
-String get_formatted_time(time_t atime) {
-  String str_out;
-  str_out = String(ctime(&atime));
-  str_out.trim();
-  return str_out;
+void get_formatted_time(time_t atime) {
+  sprintf(str_buff,ctime(&atime));
+  str_buff[strlen(str_buff)-1] = '\0'; //Remove newline at the end of ctime output string
+  return;
 }
 
 bool pubdata(void) {
@@ -94,13 +93,15 @@ bool pubdata(void) {
   payload["edges"]                = Edges;
   payload["moved_last_half_hour"] = int(moved_in_last_half_hour);
   payload["inactive_for_48hrs"]   = int(!moved_in_last_48hrs);
-  payload["since"]                = get_formatted_time(Bootdatetime);
   if(Edges == 0){
     payload["last_edge"]            = "-";
   }
   else{
-    payload["last_edge"]            = get_formatted_time(Edgedatetime);
+    get_formatted_time(Edgedatetime);
+    payload["last_edge"]            = str_buff;
   }
+  get_formatted_time(Bootdatetime);
+  payload["since"]                = str_buff;
 
   char buffer[512];
   serializeJson(payload, buffer);
