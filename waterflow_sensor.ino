@@ -36,10 +36,10 @@
 #include <ArduinoOTA.h>
 #endif
 
-bool send_data = true;
-bool moved_in_last_half_hour = false;
-bool moved_in_last_48hrs = false;
-char str_buff[25];
+static bool send_data = true;
+static bool mov_30min = false;
+static bool mov_48hrs = false;
+char buffer[256];
 time_t Bootdatetime;
 time_t Edgedatetime;
 
@@ -81,8 +81,8 @@ time_t get_epoch_time() {
 }
 
 void get_formatted_time(time_t atime) {
-  sprintf(str_buff,ctime(&atime));
-  str_buff[strlen(str_buff)-1] = '\0'; //Remove newline at the end of ctime output string
+  sprintf(buffer,ctime(&atime));
+  buffer[strlen(buffer)-1] = '\0'; //Remove newline at the end of ctime output string
   return;
 }
 
@@ -91,19 +91,18 @@ bool pubdata(void) {
   payload["pulses"]               = Pulses; // = disc revs
   payload["liters"]               = Edges*1000*WATERMETER_RESOLUTION_M3*(10/2); //my watermeter has a resolution of 0.0001m³/rev and half circle disc. 1 rev m³ = 10 x 0.0001. Half metal circle m³ res = (10 x 0.0001)/2. Half metal circle liters res = 1000 x (10 x 0.0001)/2 = 0.5l 
   payload["edges"]                = Edges;
-  payload["moved_last_half_hour"] = int(moved_in_last_half_hour);
-  payload["inactive_for_48hrs"]   = int(!moved_in_last_48hrs);
+  payload["moved_last_half_hour"] = int(mov_30min);
+  payload["inactive_for_48hrs"]   = int(!mov_48hrs);
   if(Edges == 0){
     payload["last_edge"]            = "-";
   }
   else{
     get_formatted_time(Edgedatetime);
-    payload["last_edge"]            = str_buff;
+    payload["last_edge"]            = buffer;
   }
   get_formatted_time(Bootdatetime);
-  payload["since"]                = str_buff;
+  payload["since"]                = buffer;
 
-  char buffer[256];
   serializeJson(payload, buffer);
     
   if(!MqttClient.publish(dest_topic, buffer, true)) {
@@ -154,17 +153,17 @@ void loop() {
     if((unsigned long)(millis() - LastEdgeMillis) >= LED_FLICKER_MS){
       digitalWrite(blueLedPin, LOW); //There's wifi, then led ON
     }
-    if(moved_in_last_half_hour && (unsigned long)(millis() - LastEdgeMillis) >= 1800 * 1000) {
-      moved_in_last_half_hour = false;
+    if(mov_30min && (unsigned long)(millis() - LastEdgeMillis) >= 1800 * 1000) {
+      mov_30min = false;
       send_data = true;
     }
-    if(moved_in_last_48hrs && (unsigned long)(millis() - LastEdgeMillis) >= 3600 * 24 * 2 * 1000) {
-      moved_in_last_48hrs = false;
+    if(mov_48hrs && (unsigned long)(millis() - LastEdgeMillis) >= 3600 * 24 * 2 * 1000) {
+      mov_48hrs = false;
       send_data = true;
     }
     if(edge_detected) {
-      moved_in_last_half_hour = true;
-      moved_in_last_48hrs = true;
+      mov_30min = true;
+      mov_48hrs = true;
       Edgedatetime = get_epoch_time();
       digitalWrite(blueLedPin, HIGH); //turnoff led
       send_data = true;
