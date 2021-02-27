@@ -17,7 +17,6 @@ const char* mqtt_username = "mqtt_user_here";
 const char* mqtt_password = "mqtt_password_here";
 
 // mqtt client settings
-// Note PubSubClient.h has a MQTT_MAX_PACKET_SIZE of 128 defined, so either raise it to 256 or use short topics
 const char* client_id     = "waterflow"; // Must be unique on the MQTT network
 const char* dest_topic    = "waterflow";
 
