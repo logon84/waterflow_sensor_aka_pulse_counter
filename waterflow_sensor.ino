@@ -55,7 +55,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 WiFiClient WifiClient;
 PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
-StaticJsonDocument<192> payload;
 
 void ICACHE_RAM_ATTR pulseHandler() {
   if(Edges == 0) {
@@ -88,6 +87,7 @@ void get_formatted_time(time_t atime) {
 }
 
 bool pubdata(void) {
+  StaticJsonDocument<256> payload;
   payload["pulses"]               = Pulses; // = disc revs
   payload["liters"]               = Edges*1000*WATERMETER_RESOLUTION_M3*(10/2); //my watermeter has a resolution of 0.0001m³/rev and half circle disc. 1 rev m³ = 10 x 0.0001. Half metal circle m³ res = (10 x 0.0001)/2. Half metal circle liters res = 1000 x (10 x 0.0001)/2 = 0.5l 
   payload["edges"]                = Edges;
@@ -103,7 +103,7 @@ bool pubdata(void) {
   get_formatted_time(Bootdatetime);
   payload["since"]                = str_buff;
 
-  char buffer[512];
+  char buffer[256];
   serializeJson(payload, buffer);
     
   if(!MqttClient.publish(dest_topic, buffer, true)) {
