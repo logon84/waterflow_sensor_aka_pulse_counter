@@ -19,7 +19,9 @@
   
 ![Schematic](https://raw.githubusercontent.com/logon84/waterflow_sensor_aka_pulse_counter/main/schematic4.png)  
   
-https://www.youtube.com/watch?v=LDygSFmjFS4  
+https://www.youtube.com/watch?v=LDygSFmjFS4
+
+The relay on the board could serve to activate an electrovalve to instantly cut water once a leak is detected. I decided to use the relay board because it makes easier the 12v to 3.3v regulation.
   
     
 Copyright (C) 2021 Rubén López <rubenlogon@yahoo.es>  
