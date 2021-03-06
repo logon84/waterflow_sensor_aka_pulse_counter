@@ -28,4 +28,5 @@ const int PULSE_PIN  = 3;
 const unsigned int DEBOUNCE_MS = 100;
 const unsigned int LED_FLICKER_MS = 200;
 const unsigned int MIN_TIME_BETWEEN_SENDS_MS = 0;
-const float WATERMETER_RESOLUTION_M3 = 0.0001;
+const float RISING_EDGE_LITERS = 0.7;
+const float FALLING_EDGE_LITERS = 0.3;
