@@ -10,10 +10,10 @@
 * It keeps adding pulses until poweroff/reset.
 *
 * MQTT Message consists of 
-*       pulses - number of pulses counted since last device boot.
 *       liters - pulses converted to liters.
-*       edges - number of rising and falling edges detected. Useful to check if disc is moving comparing old and actual value.
-*       moved_last_half_hour - '1' if a transition in input pin has been detected in the last half hour.
+*       flow - Last waterflow (liters/min) calculated between edges.
+*       p_e - Pulses_Edges. Useful to check if disc is moving comparing old and actual value.
+*       moved_in_30min - '1' if a transition in input pin has been detected in the last half hour.
 *       inactive_for_48hrs - '1' if no new data in last 48 hours. Good to alarm if sensor is not registering data for a long period.
 *       last_edge - Last edge detected datetime.
 *       since - Last booting datetime.
@@ -46,8 +46,11 @@ time_t Edgedatetime;
 volatile bool edge_detected = false;
 volatile bool pulse_reference; //indicates which kind of edge is going to be the reference for 1 pulse rev. (true = rising edge, false = falling edge)
 volatile unsigned int Pulses = 0;
-volatile unsigned int Edges = 0;
-volatile unsigned long LastEdgeMillis;
+volatile unsigned int EdgesH = 0;
+volatile unsigned int EdgesL = 0;
+volatile unsigned int EdgeCurrent = 0;
+volatile unsigned long LastEdgeMillis = 0;
+volatile unsigned long EdgeDelta_ms = 0;
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   //Not used
@@ -56,17 +59,38 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 WiFiClient WifiClient;
 PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
 
-void ICACHE_RAM_ATTR pulseHandler() {
-  if(Edges == 0) {
-    pulse_reference = bool(!digitalRead(PULSE_PIN));
+void ICACHE_RAM_ATTR edgeHandler() {
+  EdgeCurrent = bool(digitalRead(PULSE_PIN));
+  if(EdgesH+EdgesL == 0) {
+    pulse_reference = !EdgeCurrent;
   }
   if((unsigned long)(millis() - LastEdgeMillis) >= DEBOUNCE_MS) {
     edge_detected = true;
-    Edges = Edges + 1;
+    if(EdgeCurrent) {
+       EdgesH = EdgesH + 1;  
+    }
+    else {
+      EdgesL = EdgesL + 1;
+    }
+    EdgeDelta_ms = (unsigned long)(millis() - LastEdgeMillis);
     LastEdgeMillis = millis();
-    if(pulse_reference == bool(digitalRead(PULSE_PIN))) { //We got a pulse (1 rev)
+    if(pulse_reference == EdgeCurrent) { //We got a pulse (1 rev)
       Pulses = Pulses + 1;
     }
+  }
+}
+
+void truncate_float2buffer(float inp, int ndec) {
+  if(ndec == 0) {
+    sprintf(buffer, "%d", int(inp));
+  }
+  else {
+    sprintf(buffer, "%f", inp);
+    int i=0;
+    while(buffer[i] != '.') {
+      i++;
+    }
+    buffer[i+1+ndec] = '\0'; //Truncate float output to n decimals
   }
 }
 
@@ -80,7 +104,7 @@ time_t get_epoch_time() {
   return tnow;
 }
 
-void get_formatted_time(time_t atime) {
+void formatted_time2buffer(time_t atime) {
   sprintf(buffer,ctime(&atime));
   buffer[strlen(buffer)-1] = '\0'; //Remove newline at the end of ctime output string
   return;
@@ -88,19 +112,29 @@ void get_formatted_time(time_t atime) {
 
 bool pubdata(void) {
   StaticJsonDocument<256> payload;
-  payload["pulses"]               = Pulses; // = disc revs
-  payload["liters"]               = Edges*1000*WATERMETER_RESOLUTION_M3*(10/2); //my watermeter has a resolution of 0.0001m³/rev and half circle disc. 1 rev m³ = 10 x 0.0001. Half metal circle m³ res = (10 x 0.0001)/2. Half metal circle liters res = 1000 x (10 x 0.0001)/2 = 0.5l 
-  payload["edges"]                = Edges;
-  payload["moved_last_half_hour"] = int(mov_30min);
+  truncate_float2buffer(float((int(10*EdgesL*FALLING_EDGE_LITERS) + int(10*EdgesH*RISING_EDGE_LITERS))/10.0),1);
+  payload["liters"] = buffer;
+  if (EdgeDelta_ms > 0) {
+    truncate_float2buffer(float(int(100*(int(EdgeCurrent)*RISING_EDGE_LITERS + int(!EdgeCurrent)*FALLING_EDGE_LITERS)/float(EdgeDelta_ms/60000.0))/100.0),2);
+    payload["flow"] = buffer;
+  }
+  else {
+     payload["flow"] = "0";
+  }
+  sprintf(buffer, "%d", Pulses);
+  sprintf(buffer + strlen(buffer), "_");
+  sprintf(buffer + strlen(buffer), "%d", EdgesH+EdgesL);
+  payload["p_e"]                  = buffer;
+  payload["moved_in_30min"]       = int(mov_30min);
   payload["inactive_for_48hrs"]   = int(!mov_48hrs);
-  if(Edges == 0){
+  if(EdgesH+EdgesL == 0) {
     payload["last_edge"]            = "-";
   }
-  else{
-    get_formatted_time(Edgedatetime);
-    payload["last_edge"]            = buffer;
+  else {
+    formatted_time2buffer(Edgedatetime);
+    payload["last_edge"]          = buffer;
   }
-  get_formatted_time(Bootdatetime);
+  formatted_time2buffer(Bootdatetime);
   payload["since"]                = buffer;
 
   serializeJson(payload, buffer);
@@ -125,7 +159,7 @@ void setup() {
   pinMode(blueLedPin, OUTPUT);
   digitalWrite(blueLedPin, HIGH);
   pinMode(PULSE_PIN, INPUT);
-  attachInterrupt(digitalPinToInterrupt(PULSE_PIN), pulseHandler, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(PULSE_PIN), edgeHandler, CHANGE);
 
   WiFi.hostname(client_id);
   WiFi.mode(WIFI_STA);
