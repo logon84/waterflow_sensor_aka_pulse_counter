@@ -94,6 +94,21 @@ void truncate_float2buffer(float inp, int ndec) {
   }
 }
 
+void insert_int_comma2buffer(int num, int pos) { //divide num by 10^pos by moving comma X positions to avoid float precision errors like 0,999999 and so
+  int i;
+  int len;
+  sprintf(buffer, "%d", num);
+  if(pos > 0) {
+    len = strlen(buffer);
+    buffer[len] = '_';
+    buffer[len+1] = '\0';
+    for(i=len;i+pos>len;i=i-1) {
+      buffer[i] = buffer[i-1];
+    }
+    buffer[len-pos] = '.';
+  }
+}
+
 time_t get_epoch_time() {
   time_t tnow = 0;
   tnow = time(nullptr);
@@ -112,7 +127,7 @@ void formatted_time2buffer(time_t atime) {
 
 bool pubdata(void) {
   StaticJsonDocument<256> payload;
-  truncate_float2buffer(float((int(10*EdgesL*FALLING_EDGE_LITERS) + int(10*EdgesH*RISING_EDGE_LITERS))/10.0),1);
+  insert_int_comma2buffer(int(10*EdgesL*FALLING_EDGE_LITERS) + int(10*EdgesH*RISING_EDGE_LITERS),1);
   payload["liters"] = buffer;
   if (EdgeDelta_ms > 0) {
     truncate_float2buffer(float(int(100*(int(EdgeCurrent)*RISING_EDGE_LITERS + int(!EdgeCurrent)*FALLING_EDGE_LITERS)/float(EdgeDelta_ms/60000.0))/100.0),2);
