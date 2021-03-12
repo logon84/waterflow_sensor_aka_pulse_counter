@@ -44,11 +44,11 @@ time_t Bootdatetime;
 time_t Edgedatetime;
 
 volatile bool edge_detected = false;
-volatile bool pulse_reference; //indicates which kind of edge is going to be the reference for 1 pulse rev. (true = rising edge, false = falling edge)
 volatile unsigned int Pulses = 0;
 volatile unsigned int EdgesH = 0;
 volatile unsigned int EdgesL = 0;
 volatile unsigned int EdgeCurrent = 0;
+volatile unsigned int EdgeLast = 0;
 volatile unsigned long LastEdgeMillis = 0;
 volatile unsigned long EdgeDelta_ms = 0;
 
@@ -62,21 +62,18 @@ PubSubClient MqttClient(mqtt_broker, mqtt_port, mqttCallback, WifiClient);
 void ICACHE_RAM_ATTR edgeHandler() {
   EdgeCurrent = bool(digitalRead(PULSE_PIN));
   if(EdgesH+EdgesL == 0) {
-    pulse_reference = !EdgeCurrent;
+    EdgeLast = !EdgeCurrent;
   }
-  if((unsigned long)(millis() - LastEdgeMillis) >= DEBOUNCE_MS) {
+  if((unsigned long)(millis() - LastEdgeMillis) >= DEBOUNCE_MS && EdgeCurrent == !EdgeLast) {
     edge_detected = true;
-    if(EdgeCurrent) {
-       EdgesH = EdgesH + 1;  
-    }
-    else {
-      EdgesL = EdgesL + 1;
-    }
+    
+    EdgesH = EdgesH + int(EdgeCurrent);
+    EdgesL = EdgesL + int(!EdgeCurrent);
+    
     EdgeDelta_ms = (unsigned long)(millis() - LastEdgeMillis);
     LastEdgeMillis = millis();
-    if(pulse_reference == EdgeCurrent) { //We got a pulse (1 rev)
-      Pulses = Pulses + 1;
-    }
+    EdgeLast = EdgeCurrent;
+    Pulses = int((EdgesH+EdgesL)/2);
   }
 }
 
@@ -98,8 +95,9 @@ void formatted_time2buffer(time_t atime) {
 
 bool pubdata(void) {
   StaticJsonDocument<256> payload;
-  snprintf(buffer, sizeof(buffer), "%.1f", float(EdgesL*FALLING_EDGE_LITERS + EdgesH*RISING_EDGE_LITERS));
+  snprintf(buffer, sizeof(buffer), "%.1f", EdgesL*FALLING_EDGE_LITERS + EdgesH*RISING_EDGE_LITERS);
   payload["liters"] = buffer;
+  
   if (EdgeDelta_ms > 0) {
     snprintf(buffer, sizeof(buffer), "%.2f", float(int(EdgeCurrent)*RISING_EDGE_LITERS + int(!EdgeCurrent)*FALLING_EDGE_LITERS)/float(EdgeDelta_ms/60000.0));
     payload["flow"] = buffer;
